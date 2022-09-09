@@ -102,26 +102,34 @@ def _print_info(mod_names, mod_sizes):
 
 def _parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--html-file', type=file_path, help="Path to modpack html file", required=True)
+    parser.add_argument('-f', '--html-files', nargs="+", type=file_path, help="Path to active modpack html file(s)", required=True)
+    parser.add_argument('-a', '--all-mods-file', type=file_path, help="Path to html file containing all downloaded mods", required=True)
     parser.add_argument('-r', '--arma-root', type=dir_path, default=Constants.ARMA_ROOT, help=f"Path to arma root dir. By default it is: {Constants.ARMA_ROOT}")
     return parser.parse_args()
 
-
 def main():
     args = _parse_arguments()
-    
-    # Parse HTML source file
-    soup = None
-    with open(args.html_file) as fp:
+
+    active_mod_names = []
+    all_mod_names = []
+    unused_mod_names = []
+
+    for html_file in args.html_files:
+        soup = None
+        with open(html_file) as fp:
+            soup = BeautifulSoup(fp, "html.parser")
+        active_mod_names.extend(_get_mod_names(soup))
+    active_mod_names = list(set(active_mod_names))
+
+    with open(args.all_mods_file) as fp:
         soup = BeautifulSoup(fp, "html.parser")
+    all_mod_names = _get_mod_names(soup)
 
-    mod_names = _get_mod_names(soup)
-    mod_sizes = _get_mod_sizes(mod_names, args.arma_root)
+    unused_mod_names = [mod for mod in all_mod_names if mod not in active_mod_names]
+    unused_mod_sizes = _get_mod_sizes(unused_mod_names, args.arma_root)
 
-    _print_info(mod_names, mod_sizes)
+    _print_info(unused_mod_names, unused_mod_sizes)
 
 if __name__ == "__main__":
     main()
-
-
 
