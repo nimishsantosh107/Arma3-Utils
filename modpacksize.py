@@ -74,11 +74,12 @@ def _print_info(mod_names, mod_sizes):
     console = Console()
 
     table = Table(show_header=True, header_style="bold green")
+    table.add_column("No. ")
     table.add_column("Mod Name")
     table.add_column("Size (in MB)", justify="right")
 
-    for name, size in zip(mod_names, mod_sizes):
-        table.add_row(str(name), str(round(size,3)))
+    for i, (name, size) in enumerate(zip(mod_names, mod_sizes)):
+        table.add_row(str(i+1), str(name), str(round(size,3)))
 
     total_size_mb = round(sum(mod_sizes), 2)
 
@@ -109,7 +110,8 @@ def main():
         try:
             mod_size = _get_dir_size(os.path.join(args.arma_root, '!Workshop', f'@{mod_name}'))
         except com_error:
-            mod_name = mod_name.replace(':', '-') # Fix for [RHS: GREF -> RHS- GREF]
+            mod_name = mod_name.replace(':', '-')
+            mod_name = mod_name.replace('/', '-')
             mod_size = _get_dir_size(os.path.join(args.arma_root, '!Workshop', f'@{mod_name}'))
 
         mod_sizes.append(mod_size)
