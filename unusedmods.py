@@ -57,6 +57,17 @@ def _get_dir_size(dir_path):
     folder = fso.GetFolder(dir_path)
     return folder.Size / (1024.0 ** 2) # return in MB
 
+def __process_mod_name(mod_name) -> str:
+    mod_name = mod_name.replace(':', '-')
+    mod_name = mod_name.replace('/', '-')
+    return mod_name
+
+def _get_installed_mods(arma_root) -> List[str]:
+    mod_names = os.listdir(os.path.join(arma_root, '!Workshop'))[1:] # remove `!DO_NOT_CHANGE_FILES_IN_THESE_FOLDERS``
+    mod_names = list(map(lambda i: i[1:], mod_names)) # remove @...
+    mod_names = list(map(__process_mod_name, mod_names))
+    return mod_names
+
 def _get_mod_names(soup) -> List[str]:
     '''
     Checks the parsed html file for list of mod names
@@ -66,7 +77,7 @@ def _get_mod_names(soup) -> List[str]:
         if td.parent['data-type'] == "ModContainer":
             try:
                 if td['data-type'] == "DisplayName":
-                    mod_names.append(td.text)
+                    mod_names.append(__process_mod_name(td.text))
             except KeyError: pass
     return mod_names
 
@@ -76,9 +87,8 @@ def _get_mod_sizes(mod_names, arma_root) -> List[int]:
         try:
             mod_size = _get_dir_size(os.path.join(arma_root, '!Workshop', f'@{mod_name}'))
         except com_error:
-            mod_name = mod_name.replace(':', '-')
-            mod_name = mod_name.replace('/', '-')
-            mod_size = _get_dir_size(os.path.join(arma_root, '!Workshop', f'@{mod_name}'))
+            print("add filter to __preprocess_mod_names")
+            exit(1)
 
         mod_sizes.append(mod_size)
     return mod_sizes
@@ -103,7 +113,6 @@ def _print_info(mod_names, mod_sizes):
 def _parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--html-files', nargs="+", type=file_path, help="Path to active modpack html file(s)", required=True)
-    parser.add_argument('-a', '--all-mods-file', type=file_path, help="Path to html file containing all downloaded mods", required=True)
     parser.add_argument('-r', '--arma-root', type=dir_path, default=Constants.ARMA_ROOT, help=f"Path to arma root dir. By default it is: {Constants.ARMA_ROOT}")
     return parser.parse_args()
 
@@ -111,8 +120,8 @@ def main():
     args = _parse_arguments()
 
     active_mod_names = []
-    all_mod_names = []
     unused_mod_names = []
+    installed_mod_names = []
 
     for html_file in args.html_files:
         soup = None
@@ -121,11 +130,9 @@ def main():
         active_mod_names.extend(_get_mod_names(soup))
     active_mod_names = list(set(active_mod_names))
 
-    with open(args.all_mods_file) as fp:
-        soup = BeautifulSoup(fp, "html.parser")
-    all_mod_names = _get_mod_names(soup)
+    installed_mod_names = _get_installed_mods(args.arma_root)
 
-    unused_mod_names = [mod for mod in all_mod_names if mod not in active_mod_names]
+    unused_mod_names = [mod for mod in installed_mod_names if mod not in active_mod_names]
     unused_mod_sizes = _get_mod_sizes(unused_mod_names, args.arma_root)
 
     _print_info(unused_mod_names, unused_mod_sizes)

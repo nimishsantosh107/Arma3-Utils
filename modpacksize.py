@@ -57,6 +57,11 @@ def _get_dir_size(dir_path):
     folder = fso.GetFolder(dir_path)
     return folder.Size / (1024.0 ** 2) # return in MB
 
+def __process_mod_name(mod_name) -> str:
+    mod_name = mod_name.replace(':', '-')
+    mod_name = mod_name.replace('/', '-')
+    return mod_name
+
 def _get_mod_names(soup) -> List[str]:
     '''
     Checks the parsed html file for list of mod names
@@ -66,7 +71,7 @@ def _get_mod_names(soup) -> List[str]:
         if td.parent['data-type'] == "ModContainer":
             try:
                 if td['data-type'] == "DisplayName":
-                    mod_names.append(td.text)
+                    mod_names.append(__process_mod_name(td.text))
             except KeyError: pass
     return mod_names
 
@@ -76,9 +81,8 @@ def _get_mod_sizes(mod_names, arma_root) -> List[int]:
         try:
             mod_size = _get_dir_size(os.path.join(arma_root, '!Workshop', f'@{mod_name}'))
         except com_error:
-            mod_name = mod_name.replace(':', '-')
-            mod_name = mod_name.replace('/', '-')
-            mod_size = _get_dir_size(os.path.join(arma_root, '!Workshop', f'@{mod_name}'))
+            print("add filter to __preprocess_mod_names")
+            exit(1)
 
         mod_sizes.append(mod_size)
     return mod_sizes
