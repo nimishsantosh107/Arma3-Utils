@@ -4,6 +4,7 @@ from typing import List
 
 try:
     import win32com.client as com
+    from pywintypes import com_error
     from tqdm import tqdm
     from bs4 import BeautifulSoup
     from rich.console import Console
@@ -62,10 +63,11 @@ def _get_mod_names(soup) -> List[str]:
     '''
     mod_names = []
     for td in soup.find_all("td"):
-        try:
-            if td['data-type'] == "DisplayName":
-                mod_names.append(td.text)
-        except KeyError: pass
+        if td.parent['data-type'] == "ModContainer":
+            try:
+                if td['data-type'] == "DisplayName":
+                    mod_names.append(td.text)
+            except KeyError: pass
     return mod_names
 
 def _print_info(mod_names, mod_sizes):
@@ -104,7 +106,12 @@ def main():
     mod_sizes = []
 
     for mod_name in tqdm(mod_names):
-        mod_size = _get_dir_size(os.path.join(args.arma_root, '!Workshop', f'@{mod_name}'))
+        try:
+            mod_size = _get_dir_size(os.path.join(args.arma_root, '!Workshop', f'@{mod_name}'))
+        except com_error:
+            mod_name = mod_name.replace(':', '-') # Fix for [RHS: GREF -> RHS- GREF]
+            mod_size = _get_dir_size(os.path.join(args.arma_root, '!Workshop', f'@{mod_name}'))
+
         mod_sizes.append(mod_size)
 
     _print_info(mod_names, mod_sizes)
